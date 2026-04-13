@@ -477,7 +477,9 @@ export class Markdown implements Component {
 						result += osc8Open + this.theme.link(this.theme.underline(linkText)) + osc8Close + stylePrefix;
 					} else {
 						result +=
-							osc8Open + this.theme.link(this.theme.underline(linkText)) + osc8Close +
+							osc8Open +
+							this.theme.link(this.theme.underline(linkText)) +
+							osc8Close +
 							this.theme.linkUrl(` (${token.href})`) +
 							stylePrefix;
 					}
