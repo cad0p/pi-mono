@@ -466,7 +466,13 @@ export class Markdown implements Component {
 					const linkText = this.renderInlineTokens(token.tokens || [], resolvedStyleContext);
 					// Wrap link text in OSC 8 hyperlink sequences for terminal click support.
 					// Format: ESC ] 8 ; ; URL BEL  text  ESC ] 8 ; ; BEL
-					const osc8Open = `\x1b]8;;${token.href}\x07`;
+					// Sanitize href: strip control characters that could break out of the OSC 8 sequence
+					// (ESC, BEL, ST, and other C0/C1 controls)
+					// eslint-disable-next-line no-control-regex
+					const sanitizedHref = token.href.replace(/[\x00-\x1f\x7f]/g, "");
+					// Note: OSC 8 state is not preserved across line wraps by wrapTextWithAnsi.
+					// Long links that wrap will only be clickable on the first line segment.
+					const osc8Open = `\x1b]8;;${sanitizedHref}\x07`;
 					const osc8Close = `\x1b]8;;\x07`;
 					// If link text matches href, only show the link once
 					// Compare raw text (token.text) not styled text (linkText) since linkText has ANSI codes

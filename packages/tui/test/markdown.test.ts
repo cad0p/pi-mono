@@ -1143,6 +1143,38 @@ bar`,
 			assert.ok(joined.includes("\x1b]8;;mailto:user@example.com\x07"), "Should contain OSC 8 open with mailto URL");
 			assert.ok(joined.includes("\x1b]8;;\x07"), "Should contain OSC 8 close");
 		});
+
+		it("should sanitize control characters from href in OSC 8 sequences", () => {
+			// A crafted href with control characters should not break out of OSC 8
+			const markdown = new Markdown("[click](https://example.com/\x1b\x07evil)", 0, 0, defaultMarkdownTheme);
+
+			const lines = markdown.render(80);
+			const joined = lines.join("");
+
+			// The sanitized URL should not contain ESC or BEL
+			assert.ok(joined.includes("\x1b]8;;https://example.com/evil\x07"), "Should contain sanitized URL in OSC 8");
+			// Should not have a bare ESC or BEL inside the URL portion
+			const osc8Match = joined.match(/\x1b]8;;([^\x07]*)\x07/g);
+			assert.ok(osc8Match, "Should have OSC 8 sequences");
+			for (const seq of osc8Match!) {
+				const url = seq.slice(4, -1); // strip \x1b]8;; and \x07
+				// eslint-disable-next-line no-control-regex
+				assert.ok(!/[\x00-\x1f\x7f]/.test(url), `OSC 8 URL should not contain control chars: ${JSON.stringify(url)}`);
+			}
+		});
+
+		it("should produce clickable first segment when link wraps at narrow width", () => {
+			const markdown = new Markdown("[click this long link text](https://example.com)", 0, 0, defaultMarkdownTheme);
+
+			// Narrow width forces wrapping
+			const lines = markdown.render(20);
+
+			// First line should contain the OSC 8 open sequence
+			assert.ok(lines[0].includes("\x1b]8;;https://example.com\x07"), "First line should have OSC 8 open");
+			// At least one line should contain the OSC 8 close
+			const joined = lines.join("");
+			assert.ok(joined.includes("\x1b]8;;\x07"), "Should contain OSC 8 close");
+		});
 	});
 
 	describe("HTML-like tags in text", () => {
